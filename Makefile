@@ -1,6 +1,6 @@
 CFLAGS=-Wall
 LIBS=-lev
-OBJ = http_parser.c server_eh.c main.c
+OBJ = sha256.c http_parser.c server_eh.c mikita.c
 
 all: mikita
 
