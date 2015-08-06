@@ -9,24 +9,54 @@
 #include <signal.h>
 #include <ev.h>
 
-// see http_parser.h
-// char DELETE = 0;
-// char GET = 1;
-// char HEAD = 2;
-// char POST = 3;
-// char PUT = 4;
+#include "sha256.h"
+
+#define PORT 8080
+
+void rand_str(char *dest, size_t length) {
+    char charset[] = "0123456789!@#$%^&*()_\\[]{}:\"+<>?/`~"
+                     "abcdefghijklmnopqrstuvwxyz"
+                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    while (length-- > 0) {
+        size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
+        *dest++ = charset[index];
+    }
+    *dest = '\0';
+}
 
 void handle_request(struct http_request *request, int fd) {
-    if (!strcmp("/", request->url))
-	puts("ROOT");
-    else if (!strcmp("/auth", request->url))
-	puts("AUTH");
+    SHA256_CTX ctx;
+    unsigned char hash[32];
+    char sessstr[16];
+
+    printf("URL %p\n", request->url);
+    //if (!strcmp("/", request->url))
+	//puts("ROOT");
+    //else if (!strcmp("/auth", request->url))
+	//puts("AUTH");
+    //else
     write(fd, "HTTP/1.1 200 OK\r\n", 17);
-    write(fd, "Server: Mikita\\Federation/0.1\r\n", 31);
-    write(fd, "Connection: Close\r\n", 19);
-    write(fd, "Content-Type: text/html; charset=iso-8859-1\r\n\r\n", 47);
-    struct http_header *header = request->headers;
-    write(fd, "<pre>Headers:\n", 14);
+    write(fd, "Server: Mikita/0.1 (Federation)\r\n", 33);
+    write(fd, "X-Session: ", 11);
+
+    rand_str(sessstr, 16);
+
+    sha256_init(&ctx);
+    sha256_update(&ctx, (unsigned char *)sessstr, 16);
+    sha256_final(&ctx, hash);
+
+    int idx;
+    char hash2[64];
+    for (idx=0; idx<32; ++idx)
+        sprintf(&hash2[idx*2], "%02x", (unsigned int)hash[idx]);
+
+    //write(fd, "ef39abd3c5f6b0ae7e779442c4a88c5c77508fd65101952bc32eb3ff9b3de2cb", 64);
+    write(fd, hash2, 64);
+    write(fd, "\r\n", 2);
+    write(fd, "Content-Type: application/json; charset=utf-8\r\n\r\n", 49);
+    //struct http_header *header = request->headers;
+    /*write(fd, "<pre>Headers:\n", 14);
     while (header != NULL) {
         write(fd, header->name, strlen(header->name));
         write(fd, ": ", 2);
@@ -39,8 +69,10 @@ void handle_request(struct http_request *request, int fd) {
     }
     char *my_data = (char*) request->data;
     write(fd, "my string is ", 13);
-    write(fd, my_data, strlen(my_data));
+    write(fd, my_data, strlen(my_data));*/
+    write(fd, "{\"status\":\"online\"}", 19);
     write(fd, "\r\n\r\n", 4);
+
     close(fd);
 }
 
@@ -52,13 +84,13 @@ void sigint_handler(int s) {
     exit(0);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
     // configure server structures and desired listen address
     struct sockaddr_in listen_addr;
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = INADDR_ANY;
-    listen_addr.sin_port = htons(8080);
+    listen_addr.sin_port = htons(PORT);
     server.listen_addr = &listen_addr;
     server.handle_request = handle_request;
     server.data = "this is my string";

@@ -1,4 +1,4 @@
-CFLAGS=-Wall
+CFLAGS=-Wall -g
 LIBS=-lev
 OBJ = sha256.c http_parser.c server_eh.c mikita.c
 

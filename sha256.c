@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define uchar unsigned char // 8-bit byte
-#define uint unsigned int // 32-bit word
+#include "sha256.h"
 
 // DBL_INT_ADD treats two unsigned ints a and b as one 64-bit integer and adds c to it
 #define DBL_INT_ADD(a,b,c) if (a > 0xffffffff - (c)) ++b; a += c;
@@ -16,13 +15,6 @@
 #define SIG0(x) (ROTRIGHT(x,7) ^ ROTRIGHT(x,18) ^ ((x) >> 3))
 #define SIG1(x) (ROTRIGHT(x,17) ^ ROTRIGHT(x,19) ^ ((x) >> 10))
 
-typedef struct {
-   uchar data[64];
-   uint datalen;
-   uint bitlen[2];
-   uint state[8];
-} SHA256_CTX;
-
 uint k[64] = {
    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
@@ -35,7 +27,7 @@ uint k[64] = {
 };
 
 
-void sha256_transform(SHA256_CTX *ctx, uchar data[])
+static void sha256_transform(SHA256_CTX *ctx, uchar data[])
 {  
    uint a,b,c,d,e,f,g,h,i,j,t1,t2,m[64];
       
